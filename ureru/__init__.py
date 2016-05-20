@@ -91,7 +91,7 @@ def make_time_series(sami):
         start = int(td['start'])
         for class_, sentence in _normal_case(td):
             subtitles[class_].append(Caption(since=start, sentence=sentence))
-    for class_ in subtitles.keys():
+    for class_ in subtitles.keys():  # append dummy to last of subtitles, because of when sync subtitles throw away even though last caption has sentence
         subtitles[class_].append(Caption(since=subtitles[class_][-1].since + 5000, sentence=''))
     return subtitles
 
