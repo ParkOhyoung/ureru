@@ -3,7 +3,9 @@ import argparse
 from bisect import bisect_left
 from collections import defaultdict, namedtuple
 from functools import partial
+import io
 import itertools
+import json
 from operator import itemgetter
 import re
 import sys
@@ -26,6 +28,32 @@ _ignore_some_stuff = lambda s: re.sub(r'(\s*\-+\s*|<br\s*\/*>|\&nbsp;*)',
                                       flags=re.I)
 Caption = namedtuple('Caption', 'since, until, sentence')
 Caption.__new__ = partial(Caption.__new__, until=None)
+
+
+def make_sample(file_name, data):
+    with io.open('../utils/{}.js'.format(file_name), 'w', encoding='utf8') as js_file:
+        data = json.dumps(to_dict_for_highchart(data), ensure_ascii=False)
+        js_file.write(u'var {}_data='.format(file_name))
+        js_file.write(data)
+        js_file.write(u';')
+
+
+def to_dict_for_highchart(time_series):
+    def to_dict(accu, caption):
+        return {
+            'x': caption.since,
+            'y': accu,
+            'z': caption.until,
+            'c': caption.sentence.replace('\n', '<br>')
+        }
+    results = []
+    for key, captions in time_series.items():
+        c1, c2 = itertools.tee(captions)
+        accumulates = itertools.accumulate((c.since for c in c1))
+        tmp_dictionary = {'name': key}
+        tmp_dictionary['data'] = [to_dict(accu, caption) for (accu, caption) in zip(accumulates, c2)]
+        results.append(tmp_dictionary)
+    return results
 
 
 def to_string(caption):
@@ -233,7 +261,7 @@ def merge(multiful_time_series):
     return generate(time_series_group)
 
 
-def generate(opened_files, target_file):
+def generate(opened_files):
     time_series = []
     for f in opened_files:
         smi = f.read()
@@ -241,24 +269,21 @@ def generate(opened_files, target_file):
         f.close()
     multiful_time_series = dict(time_series)
     time_series_with_until = fill_until(multiful_time_series)
+    time_series_for_dict = fill_until(multiful_time_series)
+    make_sample('source', time_series_for_dict)
     syncd_time_series = sync(time_series_with_until)
     merged_time_series = merge(syncd_time_series)
-    if not target_file:
-        return merged_time_series
-    for caption in merged_time_series:
-        target_file.write(to_string(caption))
-    target_file.close()
+    make_sample('output', {'ENCC': merged_time_series})
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sync subtitles.')
     parser.add_argument('files', nargs='*', type=argparse.FileType())
     parser.add_argument('--test', action='store_true', help='Run doctests.')
-    parser.add_argument('--out', type=argparse.FileType('w', encoding='utf-8'))
     args = parser.parse_args()
     if args.test:
         import doctest
         print('testing...')
         doctest.testmod()
     else:
-        print(generate(args.files, args.out))
+        generate(args.files)

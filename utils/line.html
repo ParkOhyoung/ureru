@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="./source.js"></script>
+        <script src="./output.js"></script>
+        <style type="text/css">
+            table {
+                display:inline;
+            }
+            table.table-style {
+                font-family: verdana, arial, sans-serif;
+                font-size: 11px;
+                color: #333333;
+                border-width: 1px;
+                border-color: #3A3A3A;
+                border-collapse: collapse;
+            }
+            table.table-style th {
+                border-width: 1px;
+                padding: 8px;
+                border-style: solid;
+                border-color: #FFA6A6;
+                background-color: #D56A6A;
+                color: #ffffff;
+            }
+            table.table-style tr:hover td {
+                cursor: pointer;
+            }
+            table.table-style tr:nth-child(even) td{
+                background-color: #F7CFCF;
+            }
+            table.table-style td {
+                border-width: 1px;
+                padding: 8px;
+                border-style: solid;
+                border-color: #FFA6A6;
+                background-color: #ffffff;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container" style="min-width: 310px; height: 800px; margin: 0 auto"></div>
+        <table id="subtitles1" class="table-style">
+            <tr>
+                <th>Since</th>
+                <th>Until</th>
+                <th>Sentence</th>
+            </tr>
+        </table>
+        <table id="subtitles2" class="table-style">
+            <tr>
+                <th>Since</th>
+                <th>Until</th>
+                <th>Sentence</th>
+            </tr>
+        </table>
+        <table id="subtitles3" class="table-style">
+            <tr>
+                <th>Since</th>
+                <th>Until</th>
+                <th>Sentence</th>
+            </tr>
+        </table>
+    </body>
+</html>
+<script type="text/javascript">
+
+function drawRow(rowData, table_id) {
+    var row = $("<tr />");
+    $(table_id).append(row);
+    row.append($("<td>" + rowData.x + "</td>"));
+    row.append($("<td>" + rowData.z + "</td>"));
+    row.append($("<td>" + rowData.c + "</td>"));
+}
+
+function drawTable(data, table_id) {
+    for (var i = 0; i < data.length; i++) {
+        drawRow(data[i], table_id);
+    }
+}
+
+$(function () {
+    var options = {
+        chart: {
+            type: 'spline',
+            zoomType: 'x'
+        },
+        title: {
+            text: 'Compare source subtitles'
+        },
+        xAxis: {
+            type: 'linear',
+            title: {
+                text: 'Time'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Length of caption'
+            },
+            min: 0
+        },
+        tooltip: {
+            headerFormat: '<b>{series.name}</b><br>',
+            pointFormat: '{point.c}'
+        },
+        plotOptions: {
+            spline: {
+                marker: {
+                    enabled: true
+                }
+            }
+        },
+        series: []
+    }
+    options.series = source_data;
+    $('<div class="chart">').appendTo('#container').highcharts(options);
+    options.title = {text: 'Output'};
+    options.series = output_data;
+    $('<div class="chart">').appendTo('#container').highcharts(options);
+    drawTable(source_data[0].data, "#subtitles1");
+    drawTable(source_data[1].data, "#subtitles2");
+    drawTable(output_data[0].data, "#subtitles3");
+});
+</script>
+<!--
+
+//-->
