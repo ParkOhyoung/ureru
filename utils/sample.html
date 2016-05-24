@@ -69,21 +69,70 @@
 </html>
 <script type="text/javascript">
 
-function drawRow(rowData, table_id) {
-    var row = $("<tr />");
-    $(table_id).append(row);
-    row.append($("<td>" + rowData.x + "</td>"));
-    row.append($("<td>" + rowData.z + "</td>"));
-    row.append($("<td>" + rowData.c + "</td>"));
-}
-
-function drawTable(data, table_id) {
-    for (var i = 0; i < data.length; i++) {
-        drawRow(data[i], table_id);
-    }
-}
-
 $(function () {
+    function drawRow(rowData, table_id) {
+        var row = $("<tr />");
+        $(table_id).append(row);
+        row.append($("<td>" + rowData.x + "</td>"));
+        row.append($("<td>" + rowData.z + "</td>"));
+        row.append($("<td>" + rowData.c + "</td>"));
+    }
+
+    function drawTable(data, table_id) {
+        for (var i = 0; i < data.length; i++) {
+            drawRow(data[i], table_id);
+        }
+    }
+
+     $('#container').bind('mousemove touchmove touchstart', function (e) {
+        var chart,
+            point,
+            i,
+            event;
+
+        for (i = 0; i < Highcharts.charts.length; i = i + 1) {
+            chart = Highcharts.charts[i];
+            event = chart.pointer.normalize(e.originalEvent); // Find coordinates within the chart
+            point = chart.series[0].searchPoint(event, true); // Get the hovered point
+
+            if (point) {
+                point.highlight(e);
+            }
+        }
+    });
+    /**
+     * Override the reset function, we don't need to hide the tooltips and crosshairs.
+     */
+    Highcharts.Pointer.prototype.reset = function () {
+        return undefined;
+    };
+
+    /**
+     * Highlight a point by showing tooltip, setting hover state and draw crosshair
+     */
+    Highcharts.Point.prototype.highlight = function (event) {
+        this.onMouseOver(); // Show the hover marker
+        this.series.chart.tooltip.refresh(this); // Show the tooltip
+        this.series.chart.xAxis[0].drawCrosshair(event, this); // Show the crosshair
+    };
+
+    /**
+     * Synchronize zooming through the setExtremes event handler.
+     */
+    function syncExtremes(e) {
+        var thisChart = this.chart;
+
+        if (e.trigger !== 'syncExtremes') { // Prevent feedback loop
+            Highcharts.each(Highcharts.charts, function (chart) {
+                if (chart !== thisChart) {
+                    if (chart.xAxis[0].setExtremes) { // It is null while updating
+                        chart.xAxis[0].setExtremes(e.min, e.max, undefined, false, { trigger: 'syncExtremes' });
+                    }
+                }
+            });
+        }
+    }
+
     var options = {
         chart: {
             type: 'spline',
@@ -93,9 +142,13 @@ $(function () {
             text: 'Compare source subtitles'
         },
         xAxis: {
+            crosshair: true,
             type: 'linear',
             title: {
                 text: 'Time'
+            },
+            events: {
+                setExtremes: syncExtremes
             }
         },
         yAxis: {
