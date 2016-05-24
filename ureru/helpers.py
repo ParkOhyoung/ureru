@@ -4,7 +4,7 @@ import io
 import itertools
 import json
 import re
-
+import sys
 
 change_tag_for_bs4 = lambda s: re.sub(r'(</*)(sync)',
                                       r'\1td',
@@ -18,8 +18,20 @@ ignore_some_stuff = lambda s: re.sub(r'(\s*\-+\s*|<br\s*\/*>|\&nbsp;*)',
                                      flags=re.I)
 
 
+def _accumulate(iterator):
+    total = 0
+    for item in iterator:
+        total += item
+        yield total
+
+
+VERSION = sys.version_info.major
+if VERSION == 2:
+    itertools.accumulate = _accumulate
+
+
 def make_sample(file_name, data):
-    with io.open('../utils/{}.js'.format(file_name), 'w', encoding='utf8') as js_file:
+    with io.open('utils/{}.js'.format(file_name), 'w', encoding='utf8') as js_file:
         data = json.dumps(to_dict_for_highchart(data), ensure_ascii=False)
         js_file.write(u'var {}_data='.format(file_name))
         js_file.write(data)
