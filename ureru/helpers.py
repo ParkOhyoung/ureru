@@ -35,3 +35,15 @@ def to_dict_for_highchart(time_series):
         tmp_dictionary['data'] = [to_dict(caption) for caption in captions]
         results.append(tmp_dictionary)
     return results
+
+
+def get_lengh_of_overlap(x1, y1, x2, y2):
+    return min(y1, y2) - max(x1, x2)
+
+
+def consume(f):
+    def wrapper(*args):
+        g = f(*args)
+        next(g)
+        return g
+    return wrapper

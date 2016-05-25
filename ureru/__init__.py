@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
-from bisect import bisect_left
+from bisect import bisect_right
 from collections import defaultdict, namedtuple
 from functools import partial
 import itertools
@@ -9,7 +9,11 @@ import sys
 
 from bs4 import BeautifulSoup, SoupStrainer
 
-from helpers import change_tag_for_bs4, ignore_some_stuff, make_sample
+from helpers import (change_tag_for_bs4,
+                     ignore_some_stuff,
+                     make_sample,
+                     consume,
+                     get_lengh_of_overlap, )
 
 VERSION = sys.version_info.major
 if VERSION == 2:
@@ -139,7 +143,7 @@ def sync(multiful_time_series, base_class='ENCC'):
     ...                         Caption(since=2000, until=7000, sentence='차')])}
     >>> expected = {'ENCC': iter([Caption(since=100, until=250, sentence='ABC'),
     ...                           Caption(since=250, until=800, sentence='DEF'),
-    ...                           Caption(since=1600, until=2000, sentence='JKL'),
+    ...                           Caption(since=2000, until=7000, sentence='JKL'),
     ...                           Caption(since=2000, until=7000, sentence='M')]),
     ...             'JPCC': iter([Caption(since=100, until=250, sentence='あかさ'),
     ...                           Caption(since=250, until=800, sentence='たなは'),
@@ -152,34 +156,32 @@ def sync(multiful_time_series, base_class='ENCC'):
     >>> serize(sync(input_, 'KRCC')) == serize(expected)
     True
     """
-    def get_time_gap(timestamp, of_time_series):
-        _bisect_left = partial(bisect_left, of_time_series, lo=1, hi=max_index)
-        position = _bisect_left(timestamp)
-        before = abs(timestamp - of_time_series[position - 1])
-        after = abs(timestamp - of_time_series[position])
-        if before <= after:
-            return position - 1, before
-        return position, after
-
-    def get_near_positions(since, until):
-        since_position, since_gap = get_time_gap(since, since_of_time_series)
-        until_position, until_gap = get_time_gap(until, until_of_time_series)
-        position = since_position if since_gap <= until_gap else until_position
-        return {'since': since_of_time_series[position],
-                'until': until_of_time_series[position]}
-
-    def classify_since_and_until(captions):
-        return zip(*((caption.since, caption.until) for caption in captions))
+    @consume
+    def syncker(base_time_series):
+        _bisect = partial(bisect_right,
+                          base_time_series,
+                          lo=1,
+                          hi=len(base_time_series) - 1)
+        caption = yield
+        while True:
+            current_timerange = (caption.since, caption.until)
+            pos = _bisect(current_timerange)
+            before_timerange, after_timerange = base_time_series[pos - 1: pos + 1]
+            b_length = get_lengh_of_overlap(*current_timerange + before_timerange)
+            a_length = get_lengh_of_overlap(*current_timerange + after_timerange)
+            expected_items = base_time_series[pos - (b_length > a_length)]
+            caption = yield Caption(sentence=caption.sentence,
+                                    since=expected_items[0],
+                                    until=expected_items[1])
 
     results = {}
     results[base_class], base_time_series = itertools.tee(multiful_time_series[base_class])
-    since_of_time_series, until_of_time_series = classify_since_and_until(base_time_series)
-    max_index = len(since_of_time_series) - 1
-    targets = {key: value for key, value in multiful_time_series.items() if key != base_class}
-
-    for target_class, target_time_series in targets.items():
-        results[target_class] = (Caption(sentence=caption.sentence, **get_near_positions(caption.since, caption.until)) for caption in target_time_series)
-
+    base_time_series = [(c.since, c.until) for c in base_time_series]
+    _syncker = syncker(base_time_series)
+    for target_class, target_time_series in multiful_time_series.items():
+        if target_class == base_class:
+            continue
+        results[target_class] = (_syncker.send(caption) for caption in target_time_series)
     return results
 
 
@@ -187,7 +189,7 @@ def merge(multiful_time_series):
     '''
     >>> input_ = {'ENCC': iter([Caption(since=100, until=250, sentence='ABC'),
     ...                         Caption(since=250, until=800, sentence='DEF'),
-    ...                         Caption(since=1600, until=2000, sentence='JKL'),
+    ...                         Caption(since=2000, until=7000, sentence='JKL'),
     ...                         Caption(since=2000, until=7000, sentence='M')]),
     ...           'JPCC': iter([Caption(since=100, until=250, sentence='あかさ'),
     ...                         Caption(since=250, until=800, sentence='たなは'),
@@ -199,8 +201,8 @@ def merge(multiful_time_series):
     ...                         Caption(since=2000, until=7000, sentence='차')])}
     >>> expected = iter((Caption(since=100, until=250, sentence='ABC\\nあかさ\\n가나다'),
     ...                  Caption(since=250, until=800, sentence='DEF\\nたなは\\n라마바'),
-    ...                  Caption(since=1600, until=2000, sentence='JKL\\nまやら\\n사아자'),
-    ...                  Caption(since=2000, until=7000, sentence='M\\nわ\\n차')))
+    ...                  Caption(since=1600, until=2000, sentence='まやら\\n사아자'),
+    ...                  Caption(since=2000, until=7000, sentence='JKL\\nM\\nわ\\n차')))
     >>> tuple(merge(input_)) == tuple(expected)
     True
     '''
@@ -221,7 +223,7 @@ def merge(multiful_time_series):
     return generate(time_series_group)
 
 
-def generate(opened_files):
+def run(opened_files):
     time_series = []
     for f in opened_files:
         smi = f.read()
@@ -246,4 +248,4 @@ if __name__ == '__main__':
         print('testing...')
         doctest.testmod()
     else:
-        generate(args.files)
+        run(args.files)
