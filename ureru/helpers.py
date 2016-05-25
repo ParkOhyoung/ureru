@@ -4,7 +4,15 @@ import io
 import itertools
 import json
 import re
-import sys
+
+try:
+    _accumulate = itertools.accumulate
+except AttributeError:
+    def _accumulate(iterator):
+        total = 0
+        for item in iterator:
+            total += item
+            yield total
 
 change_tag_for_bs4 = lambda s: re.sub(r'(</*)(sync)',
                                       r'\1td',
@@ -16,18 +24,6 @@ ignore_some_stuff = lambda s: re.sub(r'(\s*\-+\s*|<br\s*\/*>|\&nbsp;*)',
                                      '\n',
                                      s,
                                      flags=re.I)
-
-
-def _accumulate(iterator):
-    total = 0
-    for item in iterator:
-        total += item
-        yield total
-
-
-VERSION = sys.version_info.major
-if VERSION == 2:
-    itertools.accumulate = _accumulate
 
 
 def make_sample(file_name, data):
@@ -49,7 +45,7 @@ def to_dict_for_highchart(time_series):
     results = []
     for key, captions in time_series.items():
         c1, c2 = itertools.tee(captions)
-        accumulates = itertools.accumulate((c.since for c in c1))
+        accumulates = _accumulate((c.since for c in c1))
         tmp_dictionary = {'name': key}
         tmp_dictionary['data'] = [to_dict(accu, caption) for (accu, caption) in zip(accumulates, c2)]
         results.append(tmp_dictionary)
