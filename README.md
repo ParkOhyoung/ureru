@@ -7,4 +7,4 @@ $ python ureru/__init__.py sample.smi
 $ open utils/sample.html
 ```
 ## sample output
-![Sample Image](https://cloud.githubusercontent.com/assets/8384193/15504897/1003fa5a-21fc-11e6-9096-d740411a1464.png)
+![Sample Image](https://cloud.githubusercontent.com/assets/8384193/15531808/593e36f4-2297-11e6-847f-7d75d64975af.png)
