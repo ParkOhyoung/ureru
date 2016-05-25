@@ -14,16 +14,13 @@ except AttributeError:
             total += item
             yield total
 
-change_tag_for_bs4 = lambda s: re.sub(r'(</*)(sync)',
-                                      r'\1td',
-                                      s,
-                                      flags=re.I)
+
+def change_tag_for_bs4(s):
+    return re.sub(r'(</*)(sync)', r'\1td', s, flags=re.I)
 
 
-ignore_some_stuff = lambda s: re.sub(r'(\s*\-+\s*|<br\s*\/*>|\&nbsp;*)',
-                                     '\n',
-                                     s,
-                                     flags=re.I)
+def ignore_some_stuff(s):
+    return re.sub(r'(\s*\-+\s*|<br\s*\/*>|\&nbsp;*)', '\n', s, flags=re.I)
 
 
 def make_sample(file_name, data):
