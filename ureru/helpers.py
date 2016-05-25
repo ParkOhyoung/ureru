@@ -50,7 +50,3 @@ def to_dict_for_highchart(time_series):
         tmp_dictionary['data'] = [to_dict(accu, caption) for (accu, caption) in zip(accumulates, c2)]
         results.append(tmp_dictionary)
     return results
-
-
-def to_string(caption):
-    return '{c.since}>{c.until} : {c.sentence}\n\n'.format(c=caption)
