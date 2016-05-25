@@ -1,18 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import io
-import itertools
 import json
 import re
-
-try:
-    _accumulate = itertools.accumulate
-except AttributeError:
-    def _accumulate(iterator):
-        total = 0
-        for item in iterator:
-            total += item
-            yield total
 
 
 def change_tag_for_bs4(s):
@@ -32,18 +22,16 @@ def make_sample(file_name, data):
 
 
 def to_dict_for_highchart(time_series):
-    def to_dict(accu, caption):
+    def to_dict(caption):
         return {
             'x': caption.since,
-            'y': accu,
+            'y': caption.until - caption.since,
             'z': caption.until,
             'c': caption.sentence.replace('\n', '<br>')
         }
     results = []
     for key, captions in time_series.items():
-        c1, c2 = itertools.tee(captions)
-        accumulates = _accumulate((c.since for c in c1))
         tmp_dictionary = {'name': key}
-        tmp_dictionary['data'] = [to_dict(accu, caption) for (accu, caption) in zip(accumulates, c2)]
+        tmp_dictionary['data'] = [to_dict(caption) for caption in captions]
         results.append(tmp_dictionary)
     return results
